@@ -1,5 +1,4 @@
-from .mongo_services import get_seller_by_email
-from apps.db.mongo.utils import verify_password
+
 from django.conf import settings
 import jwt
 from datetime import datetime, timedelta
@@ -25,6 +24,12 @@ def seller_login_service(data):
     # TEMP PASSWORD CHECK
     if password != seller["password"]:
         return {"error": "Invalid password"}, 401
+    
+    if not seller.get("onboarding_completed"):
+        return {
+            "error": "Please complete seller onboarding first",
+            "redirect": "onboarding/"
+        }, 403
 
     status = seller.get("status")
 

@@ -117,6 +117,7 @@ def get_profile(request):
         # Decode JWT
         try:
             decoded = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+            print("DECODED TOKEN:", decoded)
         except jwt.ExpiredSignatureError:
             return JsonResponse({"error": "Token expired"}, status=401)
         except jwt.InvalidTokenError:

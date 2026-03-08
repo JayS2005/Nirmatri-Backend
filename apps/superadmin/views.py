@@ -2,6 +2,7 @@ import json
 import jwt
 from datetime import datetime, timedelta
 from django.http import JsonResponse
+
 from django.views.decorators.csrf import csrf_exempt
 from apps.db.mongo import db
 from bson import ObjectId
@@ -69,7 +70,19 @@ def all_sellers(request):
 # GET PENDING SELLERS
 # ==============================
 
+from django.views.decorators.http import require_GET, require_POST
+from apps.db.mongo.db_collections import sellers_collection
+from bson import ObjectId
+from datetime import datetime
+import json
+
+
+# GET PENDING SELLERS FOR SUPERADMIN
+
+
+@require_GET
 def get_pending_sellers(request):
+
 
     data = list(sellers.find({"status": "pending"}))
 
@@ -158,3 +171,108 @@ def recent_activities(request):
         })
 
     return JsonResponse({"activities": activities})
+
+    page = int(request.GET.get("page", 1))
+    limit = 20
+    skip = (page - 1) * limit
+
+    sellers = list(
+        sellers_collection.find(
+            {
+                "onboarding_completed": True,
+                "status": "pending"
+            },
+            {"password": 0}
+        ).skip(skip).limit(limit)
+    )
+
+    for seller in sellers:
+        seller["_id"] = str(seller["_id"])
+
+    return JsonResponse({
+        "pending_sellers": sellers
+    })
+
+def pending_seller_count(request):
+
+    count = sellers_collection.count_documents({
+        "onboarding_completed": True,
+        "status": "pending"
+    })
+
+    return JsonResponse({"count": count})
+
+# APPROVE SELLER
+
+@require_POST
+def approve_seller(request):
+    try:
+        data = json.loads(request.body)
+        seller_id = data.get("seller_id")
+
+        sellers_collection.update_one(
+            {"_id": ObjectId(seller_id)},
+            {
+                "$set": {
+                    "status": "approved",
+                    "approved_at": datetime.utcnow(),
+                    "approved_by": "superadmin"
+                }
+            }
+        )
+
+        return JsonResponse({"message": "Seller approved"}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+# ======================================
+# REJECT SELLER
+# ======================================
+
+@require_POST
+def reject_seller(request):
+    try:
+        data = json.loads(request.body)
+        seller_id = data.get("seller_id")
+
+        sellers_collection.update_one(
+            {"_id": ObjectId(seller_id)},
+            {
+                "$set": {
+                    "status": "rejected"
+                }
+            }
+        )
+
+        return JsonResponse({"message": "Seller rejected"}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+# ======================================
+# SUSPEND SELLER
+# ======================================
+
+@require_POST
+def suspend_seller(request):
+    try:
+        data = json.loads(request.body)
+        seller_id = data.get("seller_id")
+
+        sellers_collection.update_one(
+            {"_id": ObjectId(seller_id)},
+            {
+                "$set": {
+                    "status": "suspended"
+                }
+            }
+        )
+
+        return JsonResponse({"message": "Seller suspended"}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+

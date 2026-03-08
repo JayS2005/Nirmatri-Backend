@@ -52,13 +52,47 @@ def seller_register(request):
 
         # ================= SAVE TO DB =================
         seller_doc = {
+
+            # ===== BASIC INFO =====
             "full_name": fullname,
             "email": email,
-            "password": password,  # 🔒 Later hash karenge
-            "status": "pending",   # 👈 SUPERADMIN APPROVAL
-            "created_at": datetime.utcnow(),
+            "password": password,
+
+            # ===== STORE INFO =====
+            "store_name": None,
+            "owner_name": None,
+            "store_category": [],
+
+            # ===== KYC =====
+            "pan_number": None,
+            "aadhaar_number": None,
+
+            # ===== BANK =====
+            "bank_name": None,
+            "account_holder": None,
+            "account_number": None,
+            "ifsc_code": None,
+
+            # ===== CONTACT =====
+            "phone_number": None,
+
+            # ===== WORKFLOW STATUS =====
+            "onboarding_completed": False,
+
+            # seller status controlled by admin
+            "status": "draft",     
+            # draft → onboarding not completed
+            # pending → waiting admin review
+            # approved → seller active
+            # rejected → seller rejected
+            # suspended → seller blocked
+
+            # ===== ADMIN ACTION =====
             "approved_at": None,
-            "approved_by": None
+            "approved_by": None,
+
+            # ===== TIMESTAMPS =====
+            "created_at": datetime.utcnow()
         }
 
         sellers_collection.insert_one(seller_doc)
@@ -86,50 +120,96 @@ def seller_register(request):
 
 @csrf_exempt
 def seller_onboarding(request):
+
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
     try:
         data = json.loads(request.body)
 
-        print(data)
+        email = data.get("email")
 
-        seller_doc = {
-            # STORE INFO
-            "store_name": data.get("storeName"),
-            "owner_name": data.get("ownerName"),
-            "store_category": data.get("storeCategory", []),
+        sellers_collection.update_one(
+            {"email": email},
+            {
+                "$set": {
 
-            # KYC
-            "pan_number": data.get("panNumber"),
-            "aadhaar_number": data.get("aadhaarNumber"),
+                    # STORE INFO
+                    "store_name": data.get("storeName"),
+                    "owner_name": data.get("ownerName"),
+                    "store_category": data.get("storeCategory"),
 
-            # BANK
-            "account_holder": data.get("accountHolderName"),
-            "account_number": data.get("accountNumber"),
-            "ifsc_code": data.get("ifscCode"),
-            "bank_name": data.get("bankName"),
+                    # KYC
+                    "pan_number": data.get("panNumber"),
+                    "pan_Document": data.get("panDocument"),
+                    "aadhaar_number": data.get("adharNumber"),
+                    "adhar_document": data.get("adharDocument"),
 
-            # PHONE
-            "phone_number": data.get("phoneNumber"),
+                    # BANK
+                    "account_holder": data.get("accountHolderName"),
+                    "account_number": data.get("accountNumber"),
+                    "ifsc_code": data.get("ifscCode"),
+                    "bank_name": data.get("bankName"),
 
-            # STATUS
-            "status": "pending",
-            "created_at": datetime.utcnow(),
-        }
-
-        sellers_collection.insert_one(seller_doc)
+                    # PHONE
+                    "phone_number": data.get("phoneNumber"),
+                    "otp": data.get("otp"),
+                    "isOtpVerified": False,
+                    # STATUS
+                    "onboarding_completed": True,
+                    "status": "pending"
+                }
+            }
+        )
 
         return JsonResponse({
-            "message": "Seller onboarding completed",
+            "message": "Onboarding completed",
             "status": "pending_approval"
         }, status=201)
 
     except Exception as e:
-        return JsonResponse({
-            "error": str(e)
-        }, status=500)
+        return JsonResponse({"error": str(e)}, status=500)
     
 
-#seller login API
 
+@csrf_exempt
+def approve_seller(request):
+    
+    data = json.loads(request.body)
+
+    email = data.get("email")
+
+    sellers_collection.update_one(
+    {"email": email},
+    {
+        "$set": {
+            "status": "approved",
+            "approved_at": datetime.utcnow(),
+            "approved_by": "admin_id"
+        }
+    }
+)
+
+    return JsonResponse({"message": "seller approved"})
+
+
+def reject_seller(email):
+
+    sellers_collection.update_one(
+    {"email": email},
+    {
+        "$set": {
+            "status": "rejected"
+        }
+    }
+)
+
+def suspend(email): 
+    sellers_collection.update_one(
+    {"email": email},
+    {
+        "$set": {
+            "status": "suspended"
+        }
+    }
+)

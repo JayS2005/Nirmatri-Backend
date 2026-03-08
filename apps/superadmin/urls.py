@@ -8,5 +8,13 @@ urlpatterns = [
     path("sellers/", all_sellers),
     path("seller/reject/<str:seller_id>/", reject_seller),
     path("dashboard/", admin_dashboard),
-      path("activities/", recent_activities),
+    path("activities/", recent_activities),
 ]
+
+from .views import  get_pending_sellers
+
+urlpatterns = [
+    path("api/admin/sellers/pending/", get_pending_sellers),
+
+]
+

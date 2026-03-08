@@ -11,6 +11,7 @@ urlpatterns = [
     path("", include("apps.core.urls")),
     path("api/auth/", include("authapp.urls")),
     path("api/auth/", include("apps.users.googleauth.urls")),
-
     path("api/admin/", include("apps.superadmin.urls")),
+  
 ]
+

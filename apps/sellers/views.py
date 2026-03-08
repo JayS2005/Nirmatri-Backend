@@ -82,7 +82,7 @@ def seller_register(request):
             status=500
         )
 
-#seller onboarding API
+#=======seller onboarding API========
 
 @csrf_exempt
 def seller_onboarding(request):

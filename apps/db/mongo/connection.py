@@ -142,7 +142,8 @@ def get_client() -> MongoClient:
 db = get_db()
 client = get_client()
 
-from .connection import db
 
+users_collection = db["users"]
 superadmin_collection = db["superadmins"]
 sellers_collection = db["sellers"]
+addresses_collection = db["addresses"]

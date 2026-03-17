@@ -4,7 +4,6 @@ Centralized access to all MongoDB collections
 """
 
 from pymongo.collection import Collection
-from typing import List
 
 from .connection import db
 
@@ -15,6 +14,7 @@ from .connection import db
 users_collection: Collection = db["users"]
 products_collection: Collection = db["products"]
 orders_collection: Collection = db["orders"]
+address_collection: Collection = db["addresses"]
 
 # ===============================
 # OPTIONAL ALIASES (SAFE)
@@ -23,6 +23,7 @@ orders_collection: Collection = db["orders"]
 users = users_collection
 products = products_collection
 orders = orders_collection
+addresses = address_collection
 
 # ===============================
 # PUBLIC EXPORTS
@@ -43,4 +44,5 @@ db = get_db()
 users_collection = db["users"]
 sellers_collection = db["sellers"]
 products_collection = db["products"]
-orders_collection = db["orders"]    
+orders_collection = db["orders"]  
+address_collection = db["addresses"]  

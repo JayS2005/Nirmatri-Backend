@@ -1,5 +1,4 @@
 import json
-import token
 import bcrypt
 import jwt
 
@@ -7,9 +6,10 @@ from bson import ObjectId
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
-from bson import ObjectId
 from apps.db.mongo.connection import users_collection
+from apps.db.mongo.connection import addresses_collection
 from apps.users.utils import create_jwt_token
+import datetime
 
 
 # ================= USER LOGIN =================
@@ -209,7 +209,113 @@ def logout_user(request):
     except Exception as e:
         print("LOGOUT ERROR:", str(e))
         return JsonResponse({"error": "Server error"}, status=500)
+    
+    
+def get_user_from_token(request):
 
+    auth_header = request.headers.get("Authorization")
+
+    if not auth_header:
+        return None
+
+    token = auth_header.split(" ")[1]
+
+    decoded = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+
+    user_id = decoded.get("user_id")
+
+    user = users_collection.find_one({"_id": ObjectId(user_id)})
+
+    return user
+
+@csrf_exempt
+def add_address(request):
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
+
+    user = get_user_from_token(request)
+
+    data = json.loads(request.body)
+
+    address_doc = {
+        "user_id": user["_id"],
+
+        "type": data.get("type", "home"),
+        "label": data.get("label", "Home"),
+        "name": data.get("name"),
+
+        "address": data.get("address"),
+        "city": data.get("city"),
+        "state": data.get("state"),
+        "pincode": data.get("pincode"),
+
+        "phone": data.get("phone"),
+
+        "lat": data.get("lat"),
+        "lng": data.get("lng"),
+
+        "is_default": False,
+    }
+
+    result = addresses_collection.insert_one(address_doc)
+
+    return JsonResponse({
+        "message": "Address Added",
+        "address_id": str(result.inserted_id)
+    })
+    
+
+@csrf_exempt
+def get_addresses(request):
+
+    user = get_user_from_token(request)
+
+    addresses = list(
+        addresses_collection.find(
+            {"user_id": user["_id"]},
+            {"user_id": 0}
+        )
+    )
+
+    for a in addresses:
+        a["_id"] = str(a["_id"])
+
+    return JsonResponse({
+        "addresses": addresses
+    })
+
+@csrf_exempt
+def delete_address(request, address_id):
+
+    user = get_user_from_token(request)
+
+    addresses_collection.delete_one({
+        "_id": ObjectId(address_id),
+        "user_id": user["_id"]
+    })
+
+    return JsonResponse({"message": "Address deleted"})
+
+@csrf_exempt
+def set_default_address(request):
+
+    user = get_user_from_token(request)
+
+
+    data = json.loads(request.body)
+    address_id = data.get("address_id")
+
+    # remove default from all
+    addresses_collection.update_many(
+        {
+            "_id": ObjectId(address_id),
+            "user_id": user["_id"]
+        },
+        {"$set": {"is_default": True}}
+    )
+
+    return JsonResponse({"message": "Default address updated"})
 
 # ================= FORGOT PASSWORD =================
 @csrf_exempt
@@ -221,3 +327,4 @@ def forgot_password(request):
 @csrf_exempt
 def reset_password(request):
     return JsonResponse({"message": "Reset password API working"})
+

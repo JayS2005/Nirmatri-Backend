@@ -15,6 +15,7 @@ from .connection import mongo_connection, db, client
 # COLLECTIONS
 # ===============================
 from .db_collections import (
+    address_collection,
     users_collection,
     products_collection,
     orders_collection,
